@@ -1,0 +1,22 @@
+{% import 'macros.html' as macros %}
+<html>
+  <head>
+    <meta charset='utf-8'/>
+    <link rel='stylesheet' href='/static/style.css'/>
+    <script type='text/javascript' src='/static/scripts.js'></script>
+  </head>
+  <body>
+    <div id='page-wrapper'>
+      <div class='title-bar'>
+        <h4>Snapshots</h4>
+        <h5>(some may be missing if camera had communication problem while capturing at that time)</h5>
+      </div>
+      <div id='snapshots-container'> 
+        {% if row_lists|length > 0 %}
+        {{ macros.snapshot_pagination(row_lists, is_last_page) }}
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>
+

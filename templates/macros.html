@@ -1,0 +1,21 @@
+{% macro snapshot_pagination(row_lists, is_last_page) %}
+  {% for row in row_lists %}
+  <div class="snapshot-row"> 
+    {% for img in row %}
+    <div class="snapshot-container">
+      <img class="snapshot" src="{{ url_for('static', filename= 'snapshots/'+ img['filename'])|e }}"/>
+      <div class="snapshot-label-wrapper">
+        <span class="snapshot-label">{{ img['label']|e }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  {% if is_last_page is false %}
+  <div id='snapshots-loader-wrapper'>
+    <button id='load-more-button' class='button' type='button'>
+      <span class = 'button-text'>Load Older Images</span>
+    </button>
+  </div>
+  {% endif %}
+{% endmacro %}
