@@ -3,9 +3,15 @@ from flask import (Flask, Response, render_template, request,
                     render_template_string)
 import datetime as dt
 import os
+from dotenv import load_dotenv
 
+load_dotenv('.env')
 app = Flask(__name__)
-app.config.from_object('config.DevelopmentConfig')
+
+if app.config['ENV'] == 'test':
+    app.config.from_object('config.TestConfig')
+else:
+    app.config.from_object('config.DevelopmentConfig')
 
 def full_snapshot_list(since, to):
     '''Returns list of filenames between "since" and "to" times, where "since"
