@@ -21,3 +21,8 @@ class Config(object):
 
 class DevelopmentConfig(Config):
     SECRET_KEY = 'DEVELOPMENT_KEY'
+
+class TestConfig(Config):
+    TESTING = True
+    SECRET_KEY = 'TEST_KEY'
+    SNAPSHOT_DIR = './tests/images'
