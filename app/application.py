@@ -13,10 +13,11 @@ if app.config['ENV'] == 'test':
 else:
     app.config.from_object('config.DevelopmentConfig')
 
-def full_snapshot_list(since, to):
+def full_snapshot_list(since = dt.datetime.min, to = dt.datetime.max):
     '''Returns list of filenames between "since" and "to" times, where "since"
     is the beginning of the desired time window (older times) and "to" is the 
-    end (newer times).
+    end (newer times). Calling function with no input will retrieve all image
+    files with timestamp formats.
 
     Parameters
     ----------
@@ -47,7 +48,7 @@ def full_snapshot_list(since, to):
             #skip 'errors' caused by unexpected files, wrong format, etc
             #TODO log errors? 
             continue
-    
+   
         #b/c list sorted new to old; stop once we hit end of target window
         if timestamp > to:
             continue 
