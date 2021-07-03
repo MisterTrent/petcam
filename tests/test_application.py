@@ -2,80 +2,69 @@ import pytest
 import os
 import datetime as dt
 import app.application as application
+import pdb
+
+#all one day, no gaps
+#cross midnight, no gaps
+date_sets = [
+    {'t2' : dt.datetime(2021,1,1,0,9), 't1' : dt.datetime(2021,1,1)},
+    {'t2' : dt.datetime(2021,1,2,0,9), 't1' : dt.datetime(2021,1,1,23,50)},
+]
+
+date_params = [(ds, ds) for ds in date_sets]
 
 @pytest.fixture
-def make_list():
+def date_lists(request):
     '''Fixture that does the actual work of creating lists as specified by
     the requesting test or fixture. A factory pattern is used b/c we may not 
     always want the full set of possible inputs for every test. This approach 
     (over the fixed parameter list in a fixture signature) allows for that
     flexibility.
+
     '''
 
-    def _make_list(_type, length):
-        if _type == 'basic':
-            start = dt.datetime(2021,1,1,0,length)
-        elif _type == 'overnight':
-            start = dt.datetime(2021,1,2,0,length)
+    fmt = '%Y%m%d_%H%M'
+    delt = (request.param['t2'] - request.param['t1']).seconds
+    start = request.param['t2']
 
-        start = dt.datetime(2021, 1, 1, 0, 10)
-        fmt = '%Y%m%d_%H%M'
-        
-        L = [(start - dt.timedelta(minutes = x)).strftime(fmt) + '.png'
-            for x in range(length)]
-        
-        return L
+    rng = range(delt//60) #timestamps don't use seconds, so always round 
     
-    return _make_list
+    ts_list = [(start-dt.timedelta(minutes = x)) for x in rng]
+    str_list = [ts.strftime(fmt)+'.png' for ts in ts_list]
+    
+    return ts_list, str_list
 
 @pytest.fixture
-def basic_info(request, make_list):
+def basic_info(date_list):
     '''Fixture to create lists of input data for tests.  Assumes that the 
     requester will indirectly parametrize with the necessary args to pass
     to the make_list fixture.
     '''
-
-    _type = request.param['type']
-    length = request.param['length']
-
-    out = [{'timestamp' : dt.datetime.strptime(f.split('.')[0], '%Y%m%d_%H%M'),
-            'filename' : f} for f in make_list(_type, length)]
+    
+    ts, strs = date_list
+    out = [{'timestamp' : ts[i], 'filename' : strs[i]} for i in range(len(ts))]
 
     return out
 
-
-list_data = [
-    ([], {"type" : 'basic', "length" : 10})
-]
-
-@pytest.mark.parametrize("args, basic_info", list_data, indirect=['basic_info'])
-def test_full_list(args, basic_info):
-    '''Check that the full list of image filenames is loaded from the target 
-    directory and that they're in the expected order. 
-
-    Expected is 10 png images from 00:01 through 00:10, named and ordered by
-    their ISO YYYYMMDD_HHMM timestamp (e.g. 20210101_0001.png)
+@pytest.mark.parametrize("date_lists, time_ranges", date_params, indirect=['date_lists'])
+def test_full_list(date_lists, time_ranges):
+    '''Check that the full list of image filenames is correctly truncated and
+    converted into a file information object. 
     '''
    
     #used *args to test empty call; can't doc on this in pytest parametrize
-    img_fns = application.full_snapshot_list(*args) 
+    #img_fns = application.full_snapshot_list(*args) 
+    tstamps_expect, fns = date_lists
+    
+    t2 = time_ranges['t2']
+    t1 = time_ranges['t1']
+
+    output = application.full_snapshot_list(fns, t1, t2) 
     
     date_err = "Date list mismatch.\nExpected:\n{}\nFound:\n{}"
-    fn_err = "Filename mismatch. Expected: {}, Found: {}"
 
-    #check files found are in correct new->old order
-    tstamps_found = [f['timestamp'] for f in img_fns]
-    tstamps_expect = [t['timestamp'] for t in basic_info]
-
+    tstamps_found = [f['timestamp'] for f in output]
+    
     assert tstamps_found == tstamps_expect, date_err.format(
                             '\n'.join(map(str,tstamps_expect)),
                             '\n'.join(map(str,tstamps_found)))
-   
-    #check filenames correctly match the timestamps
-    fns_expect = [t['filename'] for t in basic_info]
-    fns_found = [f['filename'] for f in img_fns]
-
-    assert fns_found == fns_expect, fn_err.format(
-                            '\n'.join(map(str,fns_expect)),
-                            '\n'.join(map(str,fns_found)))
-

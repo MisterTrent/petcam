@@ -13,18 +13,22 @@ if app.config['ENV'] == 'test':
 else:
     app.config.from_object('config.DevelopmentConfig')
 
-def full_snapshot_list(since = dt.datetime.min, to = dt.datetime.max):
-    '''Returns list of filenames between "since" and "to" times, where "since"
-    is the beginning of the desired time window (older times) and "to" is the 
-    end (newer times). Calling function with no input will retrieve all image
-    files with timestamp formats.
+def full_snapshot_list(srclist, since = dt.datetime.min, to = dt.datetime.max):
+    '''Processes input list of filenames to extract filenames matching ISO
+    datetime format, which are within the specified time range based on the 
+    datetime in the file name (rather than the file's creation time). Returns
+    list of dicts containing those filenames and datetime.timestamps.
 
     Parameters
     ----------
+    srclist : list
+        List of filenames assumed to be in ISO date format YYYYmmDD_HHMM
     since : datetime.datetime
-        Start of time for which captured images will be displayed
+        Start of time window (older time) for which captured images will be 
+        displayed
     to : datetime.datetime
-        End of time for which captured images will be displayed
+        End of time window (newer time) for which captured images will be 
+        displayed
 
     Returns
     -------
@@ -34,13 +38,10 @@ def full_snapshot_list(since = dt.datetime.min, to = dt.datetime.max):
         'timestamp' : <datetime.datetime object>}
     '''
     
-    snap_dir = app.config['SNAPSHOT_DIR'] 
-    files = [f for f in os.listdir(snap_dir) if f.endswith('.png')]
-    files.sort(reverse = True) #filenames are ISO datetime; alphabetical sort OK
 
     output = []
 
-    for f in files:
+    for f in srclist:
         try:
             timestamp_str = f.split('.')[0]
             timestamp = dt.datetime.strptime(timestamp_str, '%Y%m%d_%H%M')
@@ -49,7 +50,7 @@ def full_snapshot_list(since = dt.datetime.min, to = dt.datetime.max):
             #TODO log errors? 
             continue
    
-        #b/c list sorted new to old; stop once we hit end of target window
+        #list sorted new to old; stop once we hit end of target window
         if timestamp > to:
             continue 
         if timestamp < since:
@@ -277,22 +278,25 @@ def snapshot_list(since, now, interval):
     start, end = capture_window_dt(app.config['SNAPSHOT_CAPTURE_START'],
                                   app.config['SNAPSHOT_CAPTURE_END'],
                                   now)
-    #get full list first...
-    src_list = full_snapshot_list(start, end)
+    
+    snap_dir = app.config['SNAPSHOT_DIR'] 
+    filenames = [f for f in os.listdir(snap_dir) if f.endswith('.png')]
+    filenames.sort(reverse = True) #filenames are ISO datetime; alphabetical sort OK
+
+    srclist = full_snapshot_list(filenames, start, end)
     
     #truncate to requested times...
-    sub_list = [t for t in src_list if 
-                t['timestamp'] > since and t['timestamp'] < now]
+    #sub_list = [t for t in src_list if 
+    #            t['timestamp'] > since and t['timestamp'] < now]
     
-    if len(sub_list) == 0:
-        #return sub_list, is_last
-        return sub_list
+    if len(srclist) == 0:
+        return srclist
     
     #extract only the chosen samples
-    filtered = resolution_filter(sub_list, interval)
+    filtered = resolution_filter(srclist, interval)
     
     if len(filtered) > 0:
-        last_all = src_list[-1]['timestamp']
+        last_all = srclist[-1]['timestamp']
         last_filt = filtered[-1]['timestamp']
         d = dt.timedelta(minutes = interval)
 
